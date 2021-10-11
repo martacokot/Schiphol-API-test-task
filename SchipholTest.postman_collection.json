@@ -1,0 +1,484 @@
+{
+	"info": {
+		"_postman_id": "d3433ad4-e1ba-4ece-8595-e5f4ef0c8608",
+		"name": "SchipholTest",
+		"description": "Using the following API https://developer.schiphol.nl/\n1. Obtain an API Key to use in your code.\nAPI key is stored as collection variable api_key.\n\n2. Access the API retrieve details of the following:\n\na. All country / city combinations available as destinations from Schiphol. Sort by country ascending. Verify the results contain \"city\": \"Sydney\", \"country\": \"Australia\"\n- Sorting is provided by passing \"+country\" (%2Bcountry) parameter.\n- JavaScript test is added to verify if response contains city & country provided. \n\nb. Get a list of all IATA codes for \"country\": \"Australia\" and return them with their destination city.\ni. If either an IATA code or Destination city is missing, report this as a failure.\n\n3. Access the API and retrieve data for all flights leaving Schiphol today. Find and return\ninformation about the IATA code for each flight, along with the destination and time of\ndeparture. Verify there is an IATA code for each flight, if not return as a failure.\n\n4. Attempt to call the API with an invalid API key – validate the response.\n\n5. In each case ensure you are validating the responses returned from the APIs are correct.\n\nDemonstrate test automation and the use of frameworks that will help with readability, maintainability, validation and reporting.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "2. getDestinations",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"const city = \"Sydney\"",
+							"const country = \"Australia\"",
+							"",
+							"// From response Headers take parameter Link value and extract number of pages",
+							"function flattenPagesResponse(wholeResponse) {",
+							"    var merged = wholeResponse.map(x => x.destinations) ",
+							"    merged = [].concat.apply([], merged);",
+							"    return merged",
+							"}",
+							"",
+							"function processAllPagesData(allPagesResponseData) {",
+							"    console.log(allPagesResponseData)",
+							"    const flattenedResponse = flattenPagesResponse(allPagesResponseData)",
+							"    console.log(flattenedResponse)",
+							"    ",
+							"    pm.test(`Verify the results contain \"city\": \"${city}\" and \"country\": \"${country}\"`, () => {",
+							"        const cityAndCountry = flattenedResponse.find(x=>x.city == city && x.country == country)",
+							"        console.log(cityAndCountry)",
+							"        pm.expect(cityAndCountry).not.eql(undefined)",
+							"    });",
+							"",
+							"    pm.test(`Get a list of all IATA codes for \"country\": \"${country}\" and return them with their destination city`, () => {",
+							"        var filteredByCountry = []",
+							"        filteredByCountry = flattenedResponse.filter(x=>x.country == country)",
+							"        console.log(filteredByCountry)",
+							"        var listOfCodesAndCities = filteredByCountry.map(x => ({city: x.city, iata: x.iata}))",
+							"        console.log(listOfCodesAndCities)",
+							"",
+							"        var count = 0",
+							"        for (var row = 0; row < listOfCodesAndCities.length; row++) {",
+							"            if (!(listOfCodesAndCities[row].city) || !(listOfCodesAndCities[row].iata)) {",
+							"                count++ ",
+							"            }",
+							"        }",
+							"        console.log (count)",
+							"        pm.expect(count).to.be.eql(0, 'There are ${count} destinations missing with IATA code or city')",
+							"    });",
+							"}",
+							"",
+							"_.collectAllDataPages(pm, request, processAllPagesData)",
+							""
+						],
+						"type": "text/javascript"
+					}
+				},
+				{
+					"listen": "prerequest",
+					"script": {
+						"exec": [
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disabledSystemHeaders": {
+					"accept": true,
+					"user-agent": true,
+					"connection": true,
+					"accept-encoding": true
+				}
+			},
+			"request": {
+				"auth": {
+					"type": "apikey",
+					"apikey": [
+						{
+							"key": "key",
+							"value": "app_key",
+							"type": "string"
+						},
+						{
+							"key": "in",
+							"value": "header",
+							"type": "string"
+						},
+						{
+							"key": "value",
+							"value": "{{api_key}}",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "app_id",
+						"value": "{{app_id}}",
+						"type": "text"
+					},
+					{
+						"key": "ResourceVersion",
+						"value": "v4",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "https://api.schiphol.nl/public-flights/destinations?page=0&sort=+country\n",
+					"protocol": "https",
+					"host": [
+						"api",
+						"schiphol",
+						"nl"
+					],
+					"path": [
+						"public-flights",
+						"destinations"
+					],
+					"query": [
+						{
+							"key": "page",
+							"value": "0"
+						},
+						{
+							"key": "sort",
+							"value": "+country\n"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "3. getFlights",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// From response Headers take parameter Link value and extract number of pages",
+							"function flattenPagesResponse(wholeResponse) {",
+							"    var merged = wholeResponse.map(x => x.flights) ",
+							"    merged = [].concat.apply([], merged);",
+							"    return merged",
+							"}",
+							"",
+							"function processAllPagesData(allPagesResponseData) {",
+							"    console.log(allPagesResponseData)",
+							"    const flattenedResponse = flattenPagesResponse(allPagesResponseData)",
+							"    console.log(flattenedResponse)",
+							"    pm.test(`Verify there is an IATA code, along with the destination and time of departure for each flight\"`, () => {",
+							"        var listOfIATADestinationsAndTime = flattenedResponse.map(x => ({",
+							"            actualOffBlockTime: x.actualOffBlockTime, ",
+							"            scheduleDateTime: x.scheduleDateTime, ",
+							"            route: x.route.destinations}))",
+							"        console.log(listOfIATADestinationsAndTime)",
+							"        ",
+							"        var count = 0",
+							"        for (var row =0; row < listOfIATADestinationsAndTime.length; row++) {",
+							"            if (!listOfIATADestinationsAndTime[row].route) {",
+							"                console.log (listOfIATADestinationsAndTime[row])",
+							"                count++  ",
+							"            }",
+							"        }",
+							"        console.log (count)",
+							"        pm.expect(count).to.be.eql(0)",
+							"    });",
+							"}",
+							"",
+							"_.collectAllDataPages(pm, request, processAllPagesData)",
+							"        ",
+							"",
+							"",
+							"",
+							"",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disabledSystemHeaders": {
+					"accept": true
+				}
+			},
+			"request": {
+				"auth": {
+					"type": "apikey",
+					"apikey": [
+						{
+							"key": "value",
+							"value": "{{api_key}}",
+							"type": "string"
+						},
+						{
+							"key": "key",
+							"value": "app_key",
+							"type": "string"
+						},
+						{
+							"key": "in",
+							"value": "header",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "app_id",
+						"value": "{{app_id}}",
+						"type": "text"
+					},
+					{
+						"key": "Accept",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "ResourceVersion",
+						"value": "v4",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "https://api.schiphol.nl/public-flights/flights?flightDirection=D&page=0&sort=%2BscheduleTime\n",
+					"protocol": "https",
+					"host": [
+						"api",
+						"schiphol",
+						"nl"
+					],
+					"path": [
+						"public-flights",
+						"flights"
+					],
+					"query": [
+						{
+							"key": "flightDirection",
+							"value": "D"
+						},
+						{
+							"key": "page",
+							"value": "0"
+						},
+						{
+							"key": "sort",
+							"value": "%2BscheduleTime\n"
+						}
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "4. getDestinations using invalid API key",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Validate if response code is 403 when using invalid API key",
+							"pm.test(\"Attempt to call the API with an invalid API key\", function() {",
+							"    pm.expect(pm.response).to.have.property('code', 403);",
+							"});",
+							""
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disabledSystemHeaders": {
+					"accept": true,
+					"user-agent": true,
+					"connection": true,
+					"accept-encoding": true
+				}
+			},
+			"request": {
+				"auth": {
+					"type": "apikey",
+					"apikey": [
+						{
+							"key": "value",
+							"value": "Invalid key",
+							"type": "string"
+						},
+						{
+							"key": "key",
+							"value": "app_key",
+							"type": "string"
+						},
+						{
+							"key": "in",
+							"value": "header",
+							"type": "string"
+						}
+					]
+				},
+				"method": "GET",
+				"header": [
+					{
+						"key": "Accept",
+						"value": "application/json",
+						"type": "text"
+					},
+					{
+						"key": "app_id",
+						"value": "{{app_id}}",
+						"type": "text"
+					},
+					{
+						"key": "ResourceVersion",
+						"value": "v4",
+						"type": "text"
+					}
+				],
+				"url": {
+					"raw": "https://api.schiphol.nl/public-flights/destinations?page=0&sort=+country\n",
+					"protocol": "https",
+					"host": [
+						"api",
+						"schiphol",
+						"nl"
+					],
+					"path": [
+						"public-flights",
+						"destinations"
+					],
+					"query": [
+						{
+							"key": "page",
+							"value": "0"
+						},
+						{
+							"key": "sort",
+							"value": "+country\n"
+						}
+					]
+				}
+			},
+			"response": []
+		}
+	],
+	"auth": {
+		"type": "apikey",
+		"apikey": [
+			{
+				"key": "key",
+				"value": "{{api_key}}\t",
+				"type": "string"
+			}
+		]
+	},
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Function allows to find parameter page in the response headers: link",
+					"Object.prototype.getParameterByName = function(name, url) {",
+					"    name = name.replace(/[\\[\\]]/g, '\\\\$&');",
+					"    var regex = new RegExp('[?&]' + name + '(=([^&#]*)|&|#|$)'),",
+					"        results = regex.exec(url);",
+					"    if (!results) return null;",
+					"    if (!results[2]) return '';",
+					"    return decodeURIComponent(results[2].replace(/\\+/g, ' '));",
+					"}",
+					"",
+					"// Function allows replace parameter in the URL with different value",
+					"// Used for changing page number in getDestinations URL",
+					"Object.prototype.replaceUrlParam = function(url, paramName, paramValue) {",
+					"    if (paramValue == null) {",
+					"        paramValue = '';",
+					"    }",
+					"    var pattern = new RegExp('\\\\b('+paramName+'=).*?(&|#|$)');",
+					"    if (url.search(pattern)>=0) {",
+					"        return url.replace(pattern,'$1' + paramValue + '$2');",
+					"    }",
+					"    url = url.replace(/[?#]$/,'');",
+					"    return url + (url.indexOf('?')>0 ? '&' : '?') + paramName + '=' + paramValue;",
+					"}",
+					"",
+					"Object.prototype.createLastLinkURL = function(response) {",
+					"    const link = response.headers.get(\"link\")",
+					"    const lastLink = link.split(',').find(x=>x.includes('last'))",
+					"    return lastLink.substring(lastLink.indexOf('<') + 1, lastLink.indexOf('>')) ",
+					"}",
+					"",
+					"// Recursive function that will call all of the pages",
+					"Object.prototype.collectAllDataPages = function(pm, request, callBack) {",
+					"    _.responseCode200Test(pm.response)",
+					"    var lastLinkURL = _.createLastLinkURL(pm.response)",
+					"    // const lastPageNumber = _.getParameterByName(\"page\", lastLinkURL)",
+					"    // For testing on less pages use:",
+					"    const lastPageNumber = 11",
+					"    ",
+					"    var wholeResponse = []",
+					"    wholeResponse[0] = pm.response.json()",
+					"    numberOfProcessedPages = 1",
+					"",
+					"    // Add pages 1 to last page body responses",
+					"    for (i = 1; i < lastPageNumber; i++) {",
+					"        processAllPagesData(pm, i, request, lastLinkURL, wholeResponse, lastPageNumber, callBack)",
+					"    }",
+					"}",
+					"var numberOfProcessedPages;",
+					"",
+					"function processAllPagesData(pm, i, request, lastLinkURL, wholeResponse, lastPageNumber, callBack) {",
+					"    const followingPageURL = _.replaceUrlParam(lastLinkURL, \"page\", i)",
+					"    console.log(followingPageURL)",
+					"",
+					"    pm.sendRequest({",
+					"        url: followingPageURL,",
+					"        method: 'GET',",
+					"        header: {",
+					"            'Accept': \"application/json\",",
+					"            'app_id': request.headers[\"app_id\"],",
+					"            'app_key': request.headers[\"app_key\"],",
+					"            'ResourceVersion': \"v4\"",
+					"        },",
+					"    }, function (err, res) {",
+					"        if (err) {",
+					"            console.log(err)",
+					"        } else {",
+					"            // Validating if response is valid",
+					"            _.responseCode200Test(res)",
+					"            wholeResponse[i] = res.json()",
+					"            numberOfProcessedPages++;",
+					"            console.log(numberOfProcessedPages)",
+					"",
+					"            // When function reaches last page of reasults whole response can be flattened",
+					"            // Tests will run on merged flattened response json body",
+					"            if (numberOfProcessedPages == lastPageNumber) {",
+					"                callBack(wholeResponse)",
+					"            }",
+					"        }",
+					"    });",
+					"}",
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					"// Test if response is valid",
+					"Object.prototype.responseCode200Test = function(response) {",
+					"    pm.test(\"Response code is 200\", function() {",
+					"        pm.expect(response).to.have.property('code', 200);",
+					"    });",
+					"}",
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "app_id",
+			"value": "f2c1432c"
+		},
+		{
+			"key": "api_key",
+			"value": "0f8820395474cc1dba7ec5f115542813"
+		}
+	]
+}
