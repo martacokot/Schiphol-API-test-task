@@ -73,6 +73,19 @@ Using Terminal, navigate to the folder containing exported files. Type:
 
 Keep in mind that -n 1 refers to the number of iterations you want.
 
+
+How to Run tests:
+---
+1. Open Postman App
+2. Click Import button
+3. Import the collection to Postman
+4. Click On SchipholTest in left side menu
+5. Click Run
+6. Set Iterations to 1.
+7. Set Delay to 60 000 ms. Delay is necessary to get good results, otherwise the server will return 429 error once we reach over 200 requests.
+8. Click Run SchipholTest.
+9. Once the run is completed results summary is presented on the screen with 3 tabs - All Tests, Passed and Failed.
+
 Happy Testing :) 
 ---
 
